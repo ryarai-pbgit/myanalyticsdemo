@@ -44,42 +44,42 @@ def generate_customer_data(user_ids, output_file):
     device_usage = ["スマホ中心", "PC中心", "マルチデバイス"]
 
     # CSVのヘッダー
-    headers = ["ユーザID", "年齢", "性別", "居住地域", "職業", "所得水準", "教育レベル", "家族構成", "興味・関心", "デバイス利用状況"]
+    headers = ["USERID", "AGE", "GENDER", "AREA", "JOB", "INCOME", "EDUCATION", "FAMILY", "INTEREST", "DEVICE"]
 
     # データを格納するリスト
     data = []
 
     for user_id in user_ids:
         record = {
-            "ユーザID": user_id,
-            "年齢": random.choice(age_groups),
-            "性別": random.choice(genders),
-            "居住地域": random.choice(regions),
-            "職業": random.choice(occupations),
-            "所得水準": random.choice(income_levels),
-            "教育レベル": random.choice(education_levels),
-            "家族構成": random.choice(family_structures),
-            "興味・関心": random.choice(interests),
-            "デバイス利用状況": random.choice(device_usage),
+            "USERID": user_id,
+            "AGE": random.choice(age_groups),
+            "GENDER": random.choice(genders),
+            "AREA": random.choice(regions),
+            "JOB": random.choice(occupations),
+            "INCOME": random.choice(income_levels),
+            "EDUCATION": random.choice(education_levels),
+            "FAMILY": random.choice(family_structures),
+            "INTEREST": random.choice(interests),
+            "DEVICE": random.choice(device_usage),
         }
         data.append(record)
 
     # CSVに書き出し
     with open(output_file, mode="w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=headers)
+        writer = csv.DictWriter(file, fieldnames=headers, quoting=csv.QUOTE_ALL)
         writer.writeheader()
         writer.writerows(data)
 
     print(f"顧客データが {output_file} に保存されました。")
+    return data
 
 
-
-def generate_transaction_data(user_ids, transactions_per_user_range, output_file):
+def generate_transaction_data(customer_data, transactions_per_user_range, output_file):
     """
-    個人の収入、支出のトランザクションデータを生成してCSVに書き出す関数。
+    個人の支出のトランザクションデータを生成してCSVに書き出す関数。
 
     Args:
-        user_ids (list): UUID形式のユーザーIDのリスト。
+        customer_data (list): 顧客データのリスト。
         transactions_per_user_range (tuple): 各ユーザーのトランザクション数の範囲 (min, max)。
         output_file (str): 書き出すCSVファイルのパス。
     """
@@ -105,72 +105,87 @@ def generate_transaction_data(user_ids, transactions_per_user_range, output_file
         "徳島県", "香川県", "愛媛県", "高知県", "福岡県", "佐賀県", "長崎県",
         "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県", "オンライン", "その他"
     ]
-    income_expense_types = ["Expense", "Income"]
 
     # CSVのヘッダー
-    headers = ["ユーザID", "日付", "カテゴリ", "単価", "数量", "金額", "支払区分", "店舗場所", "収支"]
+    headers = ["USERID", "DATE", "CATEGORY", "UNIT", "QUANTITY", "AMOUNT", "PAYMENT", "LOCATION"]
 
     # データを格納するリスト
     data = []
 
-    for user_id in user_ids:
+    # ランダムに100人のユーザを選択して、Travelカテゴリの支出を最大値に設定
+    special_users = random.sample(customer_data, min(500, len(customer_data)))  # 最大100人を選択
+    special_user_ids = {user["USERID"] for user in special_users}  # 特別なユーザのIDをセットにする
+
+    for customer in customer_data:
+        user_id = customer["USERID"]
+        income_level = customer["INCOME"]
         num_transactions = random.randint(*transactions_per_user_range)  # トランザクション数をランダムに決定
 
         for _ in range(num_transactions):
             category = random.choice(categories)  # カテゴリをランダムに選択
             amount_min, amount_max = category_amount_ranges[category]  # 金額範囲を取得
             unit_price = round(random.uniform(amount_min, amount_max), 2)  # 単価を生成
-            quantity = random.randint(1, 10)  # 数量をランダムに生成
+            quantity = 1  # 数量を1に固定
             total_amount = round(unit_price * quantity, 2)  # 金額を計算
 
+            # 特定のユーザで、Travelカテゴリの場合、金額を最大値に設定
+            if user_id in special_user_ids and category == "Travel":
+                unit_price = amount_max
+                quantity = 1
+                total_amount = unit_price * quantity
+
             transaction = {
-                "ユーザID": user_id,
-                "日付": fake.date_between(
+                "USERID": user_id,
+                "DATE": fake.date_between(
                     start_date=date(2024, 1, 1),
                     end_date=date(2024, 12, 31)
                 ),
-                "カテゴリ": category,
-                "単価": unit_price,
-                "数量": quantity,
-                "金額": total_amount,
-                "支払区分": random.choice(payment_methods),
-                "店舗場所": random.choice(locations),
-                "収支": random.choice(income_expense_types),
+                "CATEGORY": category,
+                "UNIT": unit_price,
+                "QUANTITY": quantity,
+                "AMOUNT": total_amount,
+                "PAYMENT": random.choice(payment_methods),
+                "LOCATION": random.choice(locations),
             }
             data.append(transaction)
 
     # CSVに書き出し
     with open(output_file, mode="w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=headers)
+        writer = csv.DictWriter(file, fieldnames=headers, quoting=csv.QUOTE_ALL)
         writer.writeheader()
         writer.writerows(data)
 
     print(f"トランザクションデータが {output_file} に保存されました。")
+    return special_user_ids
 
 ### 
-def generate_overdue_table(user_ids, output_file):
+def generate_overdue_table(customer_data, exclusion_userids, output_file, num_records):
     """
     ユーザIDを基にテーブルデータを生成してCSVに書き出す関数。
 
     Args:
-        user_ids (list): UUID形式のユーザーIDのリスト。
+        customer_data (list): 顧客データのリスト。
+        exclusion_userids (list): 除外するUSERIDのリスト。
         output_file (str): 書き出すCSVファイルのパス。
     """
     # CSVのヘッダー
-    headers = ["ユーザID"]
+    headers = ["USERID"]
 
     # データを格納するリスト
     data = []
 
-    for user_id in user_ids:
-        record = {
-            "ユーザID": user_id
-        }
-        data.append(record)
+    # ランダムにUSERIDを選択してレコードを生成
+    for _ in range(num_records):
+        selected_customer = random.choice(customer_data)
+        if selected_customer["USERID"] not in exclusion_userids:
+            record = {
+                "USERID": selected_customer["USERID"]
+            }
+            data.append(record)
 
     # CSVに書き出し
     with open(output_file, mode="w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=headers)
+        writer = csv.DictWriter(file, fieldnames=headers, quoting=csv.QUOTE_ALL)
         writer.writeheader()
         writer.writerows(data)
 
@@ -178,21 +193,18 @@ def generate_overdue_table(user_ids, output_file):
 
 # 使用例
 if __name__ == "__main__":
-    user_ids = [str(uuid.uuid4()) for _ in range(100)]  # 100個のUUIDを生成
 
+    user_ids = [str(uuid.uuid4()) for _ in range(10000)]
 
+    customer_data = []
+    exclusion_userids = []
 
-# 使用例
-if __name__ == "__main__":
+    customer_data = generate_customer_data(user_ids, "data/Customer_Data.csv")
 
-    user_ids = [str(uuid.uuid4()) for _ in range(10)]
-
-    generate_customer_data(user_ids, "data/Customer_Data.csv")
-
-    generate_transaction_data(
-        user_ids=user_ids,
-        transactions_per_user_range=(300, 500),
+    exclusion_userids = generate_transaction_data(
+        customer_data=customer_data,
+        transactions_per_user_range=(100, 200),
         output_file="data/Transaction_Data.csv"
     )
 
-    generate_overdue_table(user_ids, "data/Overdue_Table.csv")
+    generate_overdue_table(customer_data, exclusion_userids, "data/Overdue_Table.csv", num_records=1000)
