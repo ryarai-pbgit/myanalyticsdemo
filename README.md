@@ -45,3 +45,57 @@
 1人当たり100-200件のトランザクションデータを作成。個人属性に関係なくランダムで500人を選び、旅行支出を最大値である5000ドルに設定。<br>
 延滞テーブルはランダムに1000人を選び延滞実績ありとする。その上で、上記の旅行支出が多い500人は除外している。<br>
 
+## 5.作成したデータについて（8/28更新）
+狙い通りにできたかを下記のように確認しています。
+```
+-- 延滞有無による平均旅行支出の違い
+SELECT
+  CASE WHEN T3.USERID IS NULL THEN '延滞なし'
+       ELSE '延滞あり' END AS overdue_group,
+       AVG(AMOUNT)
+FROM
+    CUSTOMER_DATA T1
+INNER JOIN
+    TRANSACTION_DATA T2
+ON
+    T1.USERID = T2.USERID
+LEFT OUTER JOIN
+    OVERDUE_TABLE T3
+ON
+    T1.USERID = T3.USERID
+WHERE
+    T2.CATEGORY = 'Travel'
+GROUP BY
+  CASE WHEN T3.USERID IS NULL THEN '延滞なし'
+       ELSE '延滞あり' END;
+```
+![](image/result01.png)
+```
+-- 延滞有無による平均年収の違い（ノンデグレ確認）
+SELECT
+    T1.INCOME,
+    CASE WHEN T3.USERID IS NULL THEN '延滞なし'
+       ELSE '延滞あり' END AS overdue_group,
+       COUNT(*)
+FROM
+    CUSTOMER_DATA T1
+INNER JOIN
+    TRANSACTION_DATA T2
+ON
+    T1.USERID = T2.USERID
+LEFT OUTER JOIN
+    OVERDUE_TABLE T3
+ON
+    T1.USERID = T3.USERID
+-- WHERE
+--    T1.CATEGORY = 'Travel'
+GROUP BY
+    T1.INCOME,
+    CASE WHEN T3.USERID IS NULL THEN '延滞なし'
+       ELSE '延滞あり' END
+ORDER BY
+    T1.INCOME,
+    CASE WHEN T3.USERID IS NULL THEN '延滞なし'
+       ELSE '延滞あり' END
+```
+![](image/result02.png)
