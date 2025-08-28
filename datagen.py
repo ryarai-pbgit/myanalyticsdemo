@@ -89,7 +89,7 @@ def generate_transaction_data(customer_data, transactions_per_user_range, output
         "Utilities": (10, 5000),
         "Rent": (1000, 3000),
         "Health & Fitness": (20, 2000),
-        "Travel": (100, 5000),
+        "Travel": (1000, 5000),
         "Investment": (50, 10000),
         "Entertainment": (10, 500),
         "Food & Drink": (5, 500),
@@ -128,9 +128,9 @@ def generate_transaction_data(customer_data, transactions_per_user_range, output
             quantity = 1  # 数量を1に固定
             total_amount = round(unit_price * quantity, 2)  # 金額を計算
 
-            # 延滞ありユーザで、Travelカテゴリの場合、金額を最大値の0.9-1.0倍の範囲で設定する。（平均旅行支出が高くなるはず）
+            # 延滞ありユーザで、Travelカテゴリの場合、金額を最小値の1.0-1.1倍の範囲で設定する。（平均旅行支出が低くなるはず）
             if user_id in overdue_user_ids and category == "Travel":
-                unit_price = amount_max * random.uniform(0.9, 1.0)
+                unit_price = amount_min * random.uniform(1.0, 1.1)
                 quantity = 1
                 total_amount = unit_price * quantity
 
