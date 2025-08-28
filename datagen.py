@@ -112,9 +112,9 @@ def generate_transaction_data(customer_data, transactions_per_user_range, output
     # データを格納するリスト
     data = []
 
-    # ランダムに100人のユーザを選択して、Travelカテゴリの支出を最大値に設定
-    special_users = random.sample(customer_data, min(500, len(customer_data)))  # 最大100人を選択
-    special_user_ids = {user["USERID"] for user in special_users}  # 特別なユーザのIDをセットにする
+    # ランダムに1000人のユーザを選択して、延滞ありユーザとする。
+    overdue_users = random.sample(customer_data, min(1000, len(customer_data)))  # 最大1000人を選択
+    overdue_user_ids = {user["USERID"] for user in overdue_users}  # 延滞ありユーザのIDをセットにする
 
     for customer in customer_data:
         user_id = customer["USERID"]
@@ -128,9 +128,9 @@ def generate_transaction_data(customer_data, transactions_per_user_range, output
             quantity = 1  # 数量を1に固定
             total_amount = round(unit_price * quantity, 2)  # 金額を計算
 
-            # 特定のユーザで、Travelカテゴリの場合、金額を最大値に設定
-            if user_id in special_user_ids and category == "Travel":
-                unit_price = amount_max
+            # 延滞ありユーザで、Travelカテゴリの場合、金額を最大値の0.9-1.0倍の範囲で設定する。（平均旅行支出が高くなるはず）
+            if user_id in overdue_user_ids and category == "Travel":
+                unit_price = amount_max * random.uniform(0.9, 1.0)
                 quantity = 1
                 total_amount = unit_price * quantity
 
@@ -156,55 +156,49 @@ def generate_transaction_data(customer_data, transactions_per_user_range, output
         writer.writerows(data)
 
     print(f"トランザクションデータが {output_file} に保存されました。")
-    return special_user_ids
+    return overdue_user_ids
 
 ### 
-def generate_overdue_table(customer_data, exclusion_userids, output_file, num_records):
+def generate_overdue_table(overdue_userids, output_file):
     """
     ユーザIDを基にテーブルデータを生成してCSVに書き出す関数。
 
     Args:
-        customer_data (list): 顧客データのリスト。
-        exclusion_userids (list): 除外するUSERIDのリスト。
+        overdue_userids (list): 除外するUSERIDのリスト。
         output_file (str): 書き出すCSVファイルのパス。
     """
     # CSVのヘッダー
     headers = ["USERID"]
 
-    # データを格納するリスト
-    data = []
-
-    # ランダムにUSERIDを選択してレコードを生成
-    for _ in range(num_records):
-        selected_customer = random.choice(customer_data)
-        if selected_customer["USERID"] not in exclusion_userids:
-            record = {
-                "USERID": selected_customer["USERID"]
-            }
-            data.append(record)
+    # ユーザIDを基にテーブルデータを生成
+    table_data = []
+    for user_id in overdue_userids:
+        table_data.append({"USERID": user_id})
 
     # CSVに書き出し
     with open(output_file, mode="w", newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(file, fieldnames=headers, quoting=csv.QUOTE_ALL)
         writer.writeheader()
-        writer.writerows(data)
+        writer.writerows(table_data)
 
     print(f"ユーザテーブルデータが {output_file} に保存されました。")
 
 # 使用例
 if __name__ == "__main__":
 
+    # 10000人分のユーザIDを生成
     user_ids = [str(uuid.uuid4()) for _ in range(10000)]
 
+    # 変数準備
     customer_data = []
-    exclusion_userids = []
+    overdue_userids = []
 
     customer_data = generate_customer_data(user_ids, "data/Customer_Data.csv")
 
-    exclusion_userids = generate_transaction_data(
+    overdue_userids = generate_transaction_data(
         customer_data=customer_data,
         transactions_per_user_range=(100, 200),
         output_file="data/Transaction_Data.csv"
     )
 
-    generate_overdue_table(customer_data, exclusion_userids, "data/Overdue_Table.csv", num_records=1000)
+    generate_overdue_table(overdue_userids, "data/Overdue_Table.csv")
